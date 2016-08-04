@@ -1,0 +1,3 @@
+*.json
+*.pyc
+Doc2vec/data_in/*
