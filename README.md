@@ -8,6 +8,6 @@ This project aims to conduct some experiments with clustering tweet. There are t
 - Second, execute: `$ sh 2_script_run.sh`
 - At the end, it will create a file on "data_out" folder with the clustering performed 
 
-# Instructions to Run the first approach (TF-IDF)
+# Instructions to Run the second approach (TF-IDF)
 
 - First execute: `$python tf_idf.py`
