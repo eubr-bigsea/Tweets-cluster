@@ -15,6 +15,8 @@ import nltk
 import sys
 import json
 
+from filters import *
+
 # THIS CODE ENSURE THE CORRECT ENCODING (OPTIONAL)
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -26,7 +28,7 @@ def remove_perfil(line):
 
 
 def remove_smiles(line):
-	return re.sub(r'(kk+)|((h|a){2,})| ((k|a){2,})', ' ', line, flags=re.MULTILINE)
+	return re.sub(r'(kk+)|((h|a){2,})| ((k|a){2,})', 'rs', line, flags=re.MULTILINE)
 
 def get_id_text(line):
 	#print line
@@ -50,17 +52,26 @@ def clean_data(in_data,out_data,type):
 			line = get_id_text(line)
 		else:
 			line = tweet
-		line = normalize('NFKD', line.decode('utf-8')).encode('ASCII', 'ignore').lower()  			# Remove: acents
-		line = remove_perfil(line)																	#Remove: @perfil
-		line = remove_url(line)																		#Remove: urls
+		tokens = line.split(' ',1)
+		line = ''.join(token + " " for token in tokens[1:])
+		line = filter_url(line)
+		line = filter_punct(line)
+		line = filter_accents(line)
+		line = filter_charRepetition(line)
 		line = remove_smiles(line)																	#Remove: kkk haha
-		line = re.sub('\W+',' ', line ) 															#Remove: symbols
+
+
+		#line = normalize('NFKD', line.decode('utf-8')).encode('ASCII', 'ignore').lower()  			# Remove: acents
+		#line = remove_perfil(line)																	#Remove: @perfil
+		#line = remove_url(line)																		#Remove: urls
+		#line = remove_smiles(line)																	#Remove: kkk haha
+		#line = re.sub('\W+',' ', line ) 															#Remove: symbols
 
 		line = ''.join(token + " " for token in line.split() if (token not in stopwords))			#Stopword Portuguese
-		line = ''.join(stemmer.stem(token) + " " for token in line.split())							#Stemming Portuguese
+		line = ''.join(stemmer.stem(token) + " " for token in line.split() if (len(token)>1))							#Stemming Portuguese
 		#print line
-		if(len(line.split()) > 2):
-			new_f.write(line+"\n")
+		if(len(line.split()) > 1):
+			new_f.write(tokens[0]+" " +line+"\n")
 
 	f.close()
 	new_f.close()
@@ -71,7 +82,7 @@ def clean_text(line,type):
 	if type:
 		line_t = json.loads(line)
 		line = get_id_text(line_t)
-
+	
 	line = normalize('NFKD', line.decode('utf-8')).encode('ASCII', 'ignore').lower()  			# Remove: acents
 	line = remove_perfil(line)  																# Remove: @perfil
 	line = remove_url(line)  																	# Remove: urls

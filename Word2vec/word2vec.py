@@ -1,11 +1,20 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import logging
 from gensim.models import word2vec
 from sklearn.cluster import KMeans
 import time
 
+
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
+
 def read_sentences():
     documents = [[]]
-    for line in open("./data_in/tweet.txt", "r"):
+    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
         tokens = line.split(' ')
         sentence = []
         for i in xrange(1,len(tokens)-1):
@@ -52,7 +61,7 @@ if __name__ == "__main__":
 
     start = time.time() # Start time
     word_vectors = model.syn0
-    num_clusters = 3
+    num_clusters = 8
 
     # Initalize a k-means object and use it to extract centroids
     kmeans_clustering = KMeans( n_clusters = num_clusters )
@@ -85,7 +94,7 @@ if __name__ == "__main__":
     all_docs_cluster = [ 0 for y in range(num_clusters)]       # Docs on each Cluster
 
     f = open("./data_out/Clusters.txt",'w')
-    for line in open("./data_in/tweet.txt", "r"):
+    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
         tokens = line.split(' ')
         vec_cluster = [0 for y in range(num_clusters)]
         for i in xrange(1, len(tokens) - 1):
@@ -105,10 +114,15 @@ if __name__ == "__main__":
         if num_docs_cluster[i] == 0:
             num_docs_cluster[i] = 0.00001
         print "Cluster " + str(i) + ":"
-        print  "\tNum itens:\t" + str((all_docs_cluster[i])) + "\t("+str(float((all_docs_cluster[i]))/15767)+"%)"
-        print  "\tTraffic itens/Total doc itens:\t" + str(float(num_docs_cluster[i]) /15767)
+        print "\tNum itens: %d\t(%.2f%%)"  %  (all_docs_cluster[i], 100*float(all_docs_cluster[i])/len(sentences))
+        print "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (100 * float(num_docs_cluster[i]) /len(sentences))
         precision = float(num_docs_cluster[i]) / (all_docs_cluster[i])
-        print  "\tPrecision:\t" + str(precision) + "\t\t# (relevantes dos recuperados)/recuperados   ==> Traffic itens/Cluster doc itens"
-        recall = float(num_docs_cluster[i]) / 8745
-        print  "\tRecall:\t" + str(recall) + "\t\t# (relevantes e recuperados)/relevantes"
-        print "\tF (harmonic avg):\t" + str(float((2*precision*recall)) / (precision + recall))
+        print  "\tPrecision: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+        recall = float(num_docs_cluster[i]) / 6065
+        print  "\tRecall: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+        print "\tF-Measure (harmonic avg): %.2f" % (float((2*precision*recall)) / (precision + recall))
+
+        
+
+
+

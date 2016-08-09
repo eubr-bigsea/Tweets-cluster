@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     print "LEN DOCVECS:" + str(len(model.docvecs))
 
-    Kmeans = 1
+    Kmeans = 1 
     n_kmeans = 8
     vecs = []
     if Kmeans:
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         list_labels_cluster = [[] for y in range(n_kmeans)]
         for cluster in xrange(0,n_kmeans):
         # Print the cluster number
-            print "\nCluster %d" % cluster
+            print "Computing cluster %d..." % cluster
             for i in xrange(0,len(word_centroid_map.values())):
                 if ( word_centroid_map.values()[i] == cluster ):
                     list_labels_cluster[cluster].append(word_centroid_map.keys()[i])
@@ -217,25 +217,25 @@ if __name__ == "__main__":
 
             f = open(arg['corpus'],'r')
             for i in f:
-                label = "DOC_" + i.split()[0]
+                id = i.split(' ',1)[0]
+                label = "DOC_" + id
                 for c in range(n_kmeans):
                     if  label in list_labels_cluster[c]:
                         list_docs_cluster[c].append(i)
-                        if (int(i.split()[0]) > 8745):
+                        if (int(id) > 8745):
                             num_test_cluster[c]= num_test_cluster[c] + 1
                         break
             f.close()
 
             for i in xrange(0,n_kmeans):
                 print "Cluster "+ str(i) + ":"
-                print  "\tnum itens:" + str(len(list_docs_cluster[i]))
-                print  "\tTraffic itens/Total doc itens:" + str(float(num_test_cluster[i])/len(ids))
-                print  "\tTraffic itens/Cluster doc itens:" + str(float(num_test_cluster[i]) /len(list_docs_cluster[i]))
+                print  "\tNum itens: %d\t(%.2f%%)"  %(len(list_docs_cluster[i]),100*float(len(list_docs_cluster[i]))/len(ids))
+                print  "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (100*float(num_test_cluster[i]) /len(list_docs_cluster[i]))
                 precision = float( num_test_cluster[i]) / len(list_docs_cluster[i])
-                print  "\tPrecision :" + str( precision )  + "\t\t# (relevantes dos recuperados)/recuperados"
-                recall = float(num_test_cluster[i])/ 8745
-                print  "\tRecall:"    + str(recall )       + "\t\t# (relevantes e recuperados)/relevantes"
-                print "\tF (harmonic avg):" + str(float((2*precision*recall))/(precision+ recall))
+                print  "\tPrecision: %.2f\t# Relação:(Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+                recall = float(num_test_cluster[i])/ 6065
+                print  "\tRecall: %.2f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+                print "\tF-Measure (harmonic avg): %.2f" % (float((2*precision*recall))/(precision+ recall))
 
             f = open(arg['output']+"_clusters.txt", 'w')
             for i in list_docs_cluster:
@@ -244,29 +244,3 @@ if __name__ == "__main__":
                     f.write(z)
 
             f.close()
-
-        vizualize =0   # Memmory error
-        if vizualize:
-
-            n_components = 2    # 2 for 2D, and 3 for 3D
-            #
-            model_tsne = TSNE(n_components, random_state=0)
-
-            docs_tsne = model_tsne.fit_transform(docs)
-
-
-          #  fig, ax = plt.subplots()
-            # x1 and y1 are for documents with red dots
-            x2 = docs_tsne[:,0]
-            y2 = docs_tsne[:,1]
-
-            #ax.scatter(x2, y2, color='red')
-
-            #for i, txt in enumerate(folders):
-           #     ax.annotate(txt, (x2[i],y2[i]))
-
-
-            #plt.show()
-
-
-

@@ -22,7 +22,7 @@ from dataCleanup import *
 
 def mount_text():
     documents = []
-    for line in open("./data_in/tweet.txt", "r"):
+    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
         documents.append(line.split(' ', 1)[1])
 
     return documents
@@ -32,7 +32,7 @@ def  measuring(K,clusters):
     list_docs_cluster = [[] for y in range(K)]       # Docs on each Cluster
     indice = 0
 
-    for line in open("./data_in/tweet.txt", "r"):
+    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
         id = line.split(' ')[0]
         list_docs_cluster[clusters[indice]].append("DOC_" + id)
         if int(id) > 8745:
@@ -42,18 +42,18 @@ def  measuring(K,clusters):
     #print list_docs_cluster
     #print num_docs_cluster
 
-    print "Calculando..."
+    print "Testing..."
     for i in xrange(0, K):
         if num_docs_cluster[i] == 0:
             num_docs_cluster[i] = 0.00001
         print "Cluster " + str(i) + ":"
-        print  "\tNum itens:\t" + str(len(list_docs_cluster[i])) + "\t("+str(float(len(list_docs_cluster[i]))/len(clusters))+"%)"
-        print  "\tTraffic itens/Total doc itens:\t" + str(float(num_docs_cluster[i]) /len(clusters))
+        print  "\tNum itens: %d\t(%.2f%%)"  %(len(list_docs_cluster[i]),100*float(len(list_docs_cluster[i]))/len(clusters))
+        print  "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (100*float(num_docs_cluster[i]) /len(clusters))
         precision = float(num_docs_cluster[i]) / len(list_docs_cluster[i])
-        print  "\tPrecision:\t" + str(precision) + "\t\t# (relevantes dos recuperados)/recuperados   ==> Traffic itens/Cluster doc itens"
-        recall = float(num_docs_cluster[i]) / 8745
-        print  "\tRecall:\t" + str(recall) + "\t\t# (relevantes e recuperados)/relevantes"
-        print "\tF (harmonic avg):\t" + str(float((2*precision*recall)) / (precision + recall))
+        print  "\tPrecision: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+        recall = float(num_docs_cluster[i]) / 6065
+        print  "\tRecall: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+        print "\tF-Measure (harmonic avg): %.2f" % (float((2*precision*recall)) / (precision + recall))
 
     return documents
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     X = vectorizer.fit_transform(documents)
 
 
-    true_k = 3
+    true_k = 8
     print "Clustering in " + str(true_k) + " groups..."
     km = KMeans(n_clusters=true_k, init='k-means++', max_iter=100, n_init=1)
     km.fit_predict(X)
@@ -77,11 +77,9 @@ if __name__ == "__main__":
 
     print("Homogeneity: %0.3f" % metrics.homogeneity_score(documents, km.labels_))
     print("Completeness: %0.3f" % metrics.completeness_score(documents, km.labels_))
-    print("V-measure: %0.3f" % metrics.v_measure_score(documents, km.labels_))
-    print("Adjusted Rand-Index: %.3f"
-          % metrics.adjusted_rand_score(documents, km.labels_))
-    print("Silhouette Coefficient: %0.3f"
-          % metrics.silhouette_score(X, km.labels_, sample_size=1000))
+    print("V-measure: %0.3f" % metrics.v_measure_score(documents, km.labels_))  #V-measure is an entropy-based measure which explicitly measures how successfully the criteria of homogeneity and completeness have been satisfied.
+    print("Adjusted Rand-Index: %.3f"   % metrics.adjusted_rand_score(documents, km.labels_))
+    print("Silhouette Coefficient: %0.3f" % metrics.silhouette_score(X, km.labels_, sample_size=1000))
     #print top terms per cluster clusters
 
     clusters = km.labels_.tolist()  # 0 iff term is in cluster0, 1 iff term is in cluster1 ...  (lista de termos)
