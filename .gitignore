@@ -1,3 +1,6 @@
 *.json
 *.pyc
 Doc2vec/data_in/*
+tf_idf/data_in/*
+Word2vec/data_in/*
+Word2vec/data_out/*

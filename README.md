@@ -11,3 +11,8 @@ This project aims to conduct some experiments with clustering tweet. There are t
 # Instructions to Run the second approach (TF-IDF)
 
 - First execute: `$python tf_idf.py`
+
+
+# Instructions to Run the third approach (Word2vec)
+
+- First execute: `$python word2vec.py`
