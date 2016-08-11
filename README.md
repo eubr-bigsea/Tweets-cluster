@@ -2,6 +2,11 @@
 
 This project aims to conduct some experiments with clustering tweet. There are three approaches, the first using Doc2vec, the second is using tf-idf and the last is using Word2vec.
 
+Clustering by:
+
+- K-Means
+- DBSCAN
+
 # Dataset
 
 - On the file *id_tweets_without_clean.txt*  are 14645 tweets without any clean:

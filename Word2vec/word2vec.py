@@ -5,7 +5,9 @@ import logging
 from gensim.models import word2vec
 from sklearn.cluster import KMeans
 import time
-
+from dataCleanup import *
+from sklearn.cluster import DBSCAN
+import numpy as np
 
 import sys
 reload(sys)
@@ -23,10 +25,136 @@ def read_sentences():
 
     return documents[1:]
 
+def KMEANS(num_clusters,word_vectors,model):
+    # Initalize a k-means object and use it to extract centroids
+    kmeans_clustering = KMeans(n_clusters=num_clusters)
+    idx = kmeans_clustering.fit_predict(word_vectors)
+
+    # Get the end time and print how long the process took
+    end = time.time()
+    elapsed = end - start
+    print "Time taken for K Means clustering: ", elapsed, "seconds."
+
+    # Create a Word / Index dictionary, mapping each vocabulary word to
+    # a cluster number
+    word_centroid_map = dict(zip(model.index2word, idx))
+
+    # For the first 10 clusters
+    words = [[] for y in range(num_clusters)]
+    for cluster in xrange(0, num_clusters):
+        #
+        # Print the cluster number
+        print "Cluster %d" % cluster
+        #
+        # Find all of the words for that cluster number, and print them out
+
+        for i in xrange(0, len(word_centroid_map.values())):
+            if (word_centroid_map.values()[i] == cluster):
+                words[cluster].append(word_centroid_map.keys()[i])
+                # print words[cluster]
+
+    num_docs_cluster = [0 for y in range(num_clusters)]  # Number of only traffic docs
+    all_docs_cluster = [0 for y in range(num_clusters)]  # Docs on each Cluster
+
+    f = open("./data_out/Clusters.txt", 'w')
+    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
+        tokens = line.split(' ')
+        vec_cluster = [0 for y in range(num_clusters)]
+        for i in xrange(1, len(tokens) - 1):
+            for y in xrange(0, len(words)):
+                if tokens[i] in words[y]:
+                    vec_cluster[y] += 1
+                    break
+        msg = "DOC_" + tokens[0] + " is on Cluster " + str(vec_cluster.index(max(vec_cluster)))
+        if int(tokens[0]) > 8745:
+            num_docs_cluster[vec_cluster.index(max(vec_cluster))] += 1
+        all_docs_cluster[vec_cluster.index(max(vec_cluster))] += 1
+        f.write(msg + "\n")
+    f.close()
+
+    print "Calculando..."
+    for i in xrange(0, num_clusters):
+        if num_docs_cluster[i] == 0:
+            num_docs_cluster[i] = 0.00001
+        print "Cluster " + str(i) + ":"
+        print "\tNum itens: %d\t(%.2f%%)" % (all_docs_cluster[i], 100 * float(all_docs_cluster[i]) / len(sentences))
+        print "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (
+        100 * float(num_docs_cluster[i]) / len(sentences))
+        precision = float(num_docs_cluster[i]) / (all_docs_cluster[i])
+        print  "\tPrecision: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+        recall = float(num_docs_cluster[i]) / 6065
+        print  "\tRecall: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+        print "\tF-Measure (harmonic avg): %.2f" % (float((2 * precision * recall)) / (precision + recall))
 
 
 
+def byDBSCAN(eps,sentences,model,word_vectors):
 
+    print "Clustering vectors by DBSCAN"
+
+    db = DBSCAN(eps=eps, min_samples=3).fit(word_vectors) #??
+    labels = db.labels_
+    # Number of clusters in labels, ignoring noise if present.
+    num_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+
+    print('Estimated number of clusters: %d' % num_clusters)
+    #print labels
+
+    # Create a Word / Index dictionary, mapping each vocabulary word to
+    # a cluster number
+    word_centroid_map = dict(zip(model.index2word, labels))
+
+    # For the first 10 clusters
+    words = [[] for y in range(num_clusters)]
+    for cluster in xrange(0, num_clusters):
+        #
+        # Print the cluster number
+        print "Cluster %d" % cluster
+        #
+        # Find all of the words for that cluster number, and print them out
+
+        for i in xrange(0, len(word_centroid_map.values())):
+            if (word_centroid_map.values()[i] == cluster):
+                words[cluster].append(word_centroid_map.keys()[i])
+                # print words[cluster]
+
+    num_docs_cluster = [0 for y in range(num_clusters)]  # Number of only traffic docs
+    all_docs_cluster = [0 for y in range(num_clusters)]  # Docs on each Cluster
+
+
+    f = open("./data_out/Clusters.txt", 'w')
+    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
+        tokens = line.split(' ')
+        vec_cluster = [0 for y in range(num_clusters)]
+
+        for i in xrange(1, len(tokens) - 1): #para cada token no tweet
+            #print tokens[i]
+            for y in xrange(0, len(words)):
+                if tokens[i] in words[y]:
+                    #if (-1 != labels[word_vectors.index(tokens[i])]):
+                        vec_cluster[y] += 1
+                        break
+
+        msg = "DOC_" + tokens[0] + " is on Cluster " + str(vec_cluster.index(max(vec_cluster)))
+        if int(tokens[0]) > 8745:
+            num_docs_cluster[vec_cluster.index(max(vec_cluster))] += 1
+        all_docs_cluster[vec_cluster.index(max(vec_cluster))] += 1
+        f.write(msg + "\n")
+    f.close()
+
+    print "Calculando..."
+    for i in xrange(0, num_clusters):
+        if num_docs_cluster[i] == 0:
+            num_docs_cluster[i] = 0.00001
+        print "Cluster " + str(i) + ":"
+        print "\tNum itens: %d\t(%.2f%%)" % (all_docs_cluster[i], 100 * float(all_docs_cluster[i]) / len(sentences))
+        print "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (
+        100 * float(num_docs_cluster[i]) / len(sentences))
+        precision = float(num_docs_cluster[i]) / (all_docs_cluster[i])
+        print  "\tPrecision: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+        recall = float(num_docs_cluster[i]) / 6065
+        print  "\tRecall: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+        print "\tF-Measure (harmonic avg): %.2f" % (float((2 * precision * recall)) / (precision + recall))
 
 
 if __name__ == "__main__":
@@ -57,72 +185,18 @@ if __name__ == "__main__":
     model_name = "tweets"
     model.save(model_name)
 
-    print model.most_similar("transit")
 
     start = time.time() # Start time
     word_vectors = model.syn0
-    num_clusters = 8
 
-    # Initalize a k-means object and use it to extract centroids
-    kmeans_clustering = KMeans( n_clusters = num_clusters )
-    idx = kmeans_clustering.fit_predict( word_vectors )
+    Method = 0
+    if Method:
+        num_clusters = 30
+        KMEANS(num_clusters,word_vectors,model)
+    else:
+        eps =0.09
+        byDBSCAN(eps,sentences,model,word_vectors)
 
-    # Get the end time and print how long the process took
-    end = time.time()
-    elapsed = end - start
-    print "Time taken for K Means clustering: ", elapsed, "seconds."
-
-    # Create a Word / Index dictionary, mapping each vocabulary word to
-    # a cluster number
-    word_centroid_map = dict(zip( model.index2word, idx ))
-
-    # For the first 10 clusters
-    words = [ [] for y in range(num_clusters)]
-    for cluster in xrange(0, num_clusters):
-        #
-        # Print the cluster number
-        print "\nCluster %d" % cluster
-        #
-        # Find all of the words for that cluster number, and print them out
-
-        for i in xrange(0, len(word_centroid_map.values())):
-            if (word_centroid_map.values()[i] == cluster):
-                words[cluster].append(word_centroid_map.keys()[i])
-        #print words[cluster]
-
-    num_docs_cluster  = [ 0 for y in range(num_clusters)]       # Number of only traffic docs
-    all_docs_cluster = [ 0 for y in range(num_clusters)]       # Docs on each Cluster
-
-    f = open("./data_out/Clusters.txt",'w')
-    for line in open("./data_in/id_tweet_pos_mixer.txt", "r"):
-        tokens = line.split(' ')
-        vec_cluster = [0 for y in range(num_clusters)]
-        for i in xrange(1, len(tokens) - 1):
-            for y in xrange(0,len(words)):
-                if tokens[i] in words[y]:
-                    vec_cluster[y]+=1
-                    break
-        msg= "DOC_"+tokens[0] + " is on Cluster " + str(vec_cluster.index(max(vec_cluster)))
-        if int(tokens[0]) > 8745:
-            num_docs_cluster[vec_cluster.index(max(vec_cluster))]+=1
-        all_docs_cluster[vec_cluster.index(max(vec_cluster))]+=1
-        f.write(msg+"\n")
-    f.close()
-
-    print "Calculando..."
-    for i in xrange(0, num_clusters):
-        if num_docs_cluster[i] == 0:
-            num_docs_cluster[i] = 0.00001
-        print "Cluster " + str(i) + ":"
-        print "\tNum itens: %d\t(%.2f%%)"  %  (all_docs_cluster[i], 100*float(all_docs_cluster[i])/len(sentences))
-        print "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (100 * float(num_docs_cluster[i]) /len(sentences))
-        precision = float(num_docs_cluster[i]) / (all_docs_cluster[i])
-        print  "\tPrecision: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
-        recall = float(num_docs_cluster[i]) / 6065
-        print  "\tRecall: %.3f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
-        print "\tF-Measure (harmonic avg): %.2f" % (float((2*precision*recall)) / (precision + recall))
-
-        
 
 
 

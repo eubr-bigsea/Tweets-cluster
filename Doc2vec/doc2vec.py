@@ -28,9 +28,9 @@ from gensim.models.doc2vec import TaggedDocument
 from gensim.models import Doc2Vec
 
 # sklearn modules
-from sklearn.manifold import TSNE
+from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
-
+from sklearn import metrics
 
 printable = set(string.printable)
 
@@ -95,6 +95,176 @@ class TaggedDocuments(object):
 
 
 
+def Kmeans(n_kmeans,model):
+    for doc in xrange(0, len(model.docvecs)):
+        doc_vec = model.docvecs[doc]
+        # print doc_vec
+        vecs.append(doc_vec.reshape((1, 300)))
+
+        #  print vecs[0]
+        # print vecs[1]
+        # print model.docvecs.offset2doctag
+        #  print model.docvecs.doctags.keys()
+    doc_vecs = np.array(vecs, dtype='float')  # TSNE expects float type values
+
+    # print doc_vecs
+    docs = []
+    for i in doc_vecs:
+        docs.append(i[0])
+    # print  docs
+
+    # Index2word is a list that contains the names of the words in
+    # the model's vocabulary. Convert it to a set, for speed
+    # index2word_set = set(model.index2word)
+    # print index2word_set
+
+
+    print("Clustering...")
+    startTime = time.time()
+    km_clusterer = KMeans(n_clusters=n_kmeans, n_jobs=1, n_init=5)
+    ids = km_clusterer.fit_predict(docs)
+    endTime = time.time()
+    print("Time taken for clustering: {} minutes".format((endTime - startTime) / 60))
+
+    word_centroid_map = dict(zip(model.docvecs.offset2doctag, ids))
+
+    # print "word_centroid_map"
+    # print word_centroid_map[1]
+
+    list_labels_cluster = [[] for y in range(n_kmeans)]
+    for cluster in xrange(0, n_kmeans):
+        # Print the cluster number
+        print "Computing cluster %d..." % cluster
+        for i in xrange(0, len(word_centroid_map.values())):
+            if (word_centroid_map.values()[i] == cluster):
+                list_labels_cluster[cluster].append(word_centroid_map.keys()[i])
+                # print list_docs_cluster
+                # docs_cluster = [[cluster]]
+
+    list_docs_cluster = [[] for y in range(n_kmeans)]
+    num_test_cluster = [0 for y in range(n_kmeans)]  # Traffic elements
+
+    f = open(arg['corpus'], 'r')
+    for i in f:
+        id = i.split(' ', 1)[0]
+        label = "DOC_" + id
+        for c in range(n_kmeans):
+            if label in list_labels_cluster[c]:
+                list_docs_cluster[c].append(i)
+                if (int(id) > 8745):
+                    num_test_cluster[c] = num_test_cluster[c] + 1
+                break
+    f.close()
+
+    for i in xrange(0, n_kmeans):
+        print "Cluster " + str(i) + ":"
+        print  "\tNum itens: %d\t(%.2f%%)" % (
+        len(list_docs_cluster[i]), 100 * float(len(list_docs_cluster[i])) / len(ids))
+        print  "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (
+        100 * float(num_test_cluster[i]) / len(list_docs_cluster[i]))
+        precision = float(num_test_cluster[i]) / len(list_docs_cluster[i])
+        print  "\tPrecision: %.2f\t# Relação:(Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+        recall = float(num_test_cluster[i]) / 6065
+        print  "\tRecall: %.2f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+        print "\tF-Measure (harmonic avg): %.2f" % (float((2 * precision * recall)) / (precision + recall))
+
+    f = open(arg['output'] + "_clusters.txt", 'w')
+    for i in list_docs_cluster:
+        f.write("Cluster:\n")
+        for z in i:
+            f.write(z)
+
+    f.close()
+
+
+def byDBSCAN(eps,model):
+
+    for doc in xrange(0, len(model.docvecs)):
+        doc_vec = model.docvecs[doc]
+        # print doc_vec
+        vecs.append(doc_vec.reshape((1, 300)))
+
+        #  print vecs[0]
+        # print vecs[1]
+        # print model.docvecs.offset2doctag
+        #  print model.docvecs.doctags.keys()
+    doc_vecs = np.array(vecs, dtype='float')  # TSNE expects float type values
+
+    # print doc_vecs
+    docs = []
+    for i in doc_vecs:
+        docs.append(i[0])
+    # print  docs
+
+    # Index2word is a list that contains the names of the words in
+    # the model's vocabulary. Convert it to a set, for speed
+    # index2word_set = set(model.index2word)
+    # print index2word_set
+
+    print "Clustering vectors by DBSCAN"
+    db = DBSCAN(eps=eps, min_samples=10).fit(docs)
+    labels = db.labels_
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+
+    print('Estimated number of clusters: %d' % n_clusters)
+
+    word_centroid_map = dict(zip(model.docvecs.offset2doctag, labels))
+
+    # print "word_centroid_map"
+    # print word_centroid_map[1]
+
+    list_labels_cluster = [[] for y in range(n_clusters)]
+    for cluster in xrange(0, n_clusters):
+        # Print the cluster number
+        print "Computing cluster %d..." % cluster
+        for i in xrange(0, len(word_centroid_map.values())):
+            if (word_centroid_map.values()[i] == cluster):
+                list_labels_cluster[cluster].append(word_centroid_map.keys()[i])
+                # print list_docs_cluster
+                # docs_cluster = [[cluster]]
+
+    list_docs_cluster = [[] for y in range(n_clusters)]
+    num_test_cluster = [0 for y in range(n_clusters)]  # Traffic elements
+
+    f = open(arg['corpus'], 'r')
+
+    for i in f:
+        id = i.split(' ', 1)[0]
+        label = "DOC_" + id
+        for c in range(n_clusters):
+            if label in list_labels_cluster[c]:
+                list_docs_cluster[c].append(i)
+                if (int(id) > 8745):
+                    num_test_cluster[c] = num_test_cluster[c] + 1
+                break
+    f.close()
+
+    for i in xrange(0, n_clusters):
+        print "Cluster " + str(i) + ":"
+        print  "\tNum itens: %d\t(%.2f%%)" % (
+        len(list_docs_cluster[i]), 100 * float(len(list_docs_cluster[i])) / len(labels))
+        print  "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (
+        100 * float(num_test_cluster[i]) / len(list_docs_cluster[i]))
+        precision = float(num_test_cluster[i]) / len(list_docs_cluster[i])
+        print  "\tPrecision: %.2f\t# Relação:(Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
+        recall = float(num_test_cluster[i]) / 6065
+        print  "\tRecall: %.2f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
+        if (precision + recall)==0.0:
+            soma = 0.00001
+        else:
+            soma = precision + recall
+        print "\tF-Measure (harmonic avg): %.2f" % (float((2 * precision * recall)) / (soma))
+
+    f = open(arg['output'] + "_clusters.txt", 'w')
+    for i in list_docs_cluster:
+        f.write("Cluster:\n")
+        for z in i:
+            f.write(z)
+
+    f.close()
+    print "Total = %d" % ( np.count_nonzero(labels != -1))
+
 if __name__ == "__main__":
 
 
@@ -141,7 +311,7 @@ if __name__ == "__main__":
         model.save(modelfile)
 
     model.load(modelfile)
-    print "Similaridade por palavra:"
+    print "Similaridade por palavra : transit"
     print model.most_similar("transit")
 
     print ()
@@ -159,88 +329,15 @@ if __name__ == "__main__":
 
     print "LEN DOCVECS:" + str(len(model.docvecs))
 
-    Kmeans = 1 
-    n_kmeans = 8
+    Method = 0
+
     vecs = []
-    if Kmeans:
-        for doc in xrange(0,len(model.docvecs)):
-            doc_vec = model.docvecs[doc]
-            #print doc_vec
-            vecs.append(doc_vec.reshape((1, 300)))
-
-      #  print vecs[0]
-       # print vecs[1]
-       # print model.docvecs.offset2doctag
-      #  print model.docvecs.doctags.keys()
-        doc_vecs = np.array(vecs, dtype='float')  # TSNE expects float type values
-
-        #print doc_vecs
-        docs =[]
-        for i in doc_vecs:
-            docs.append(i[0])
-        #print  docs
-
-        # Index2word is a list that contains the names of the words in
-        # the model's vocabulary. Convert it to a set, for speed
-        #index2word_set = set(model.index2word)
-        #print index2word_set
+    if Method:
+        n_kmeans = 15
+        Kmeans(n_kmeans,model)
+    else:
+        eps = 0.1
+        byDBSCAN(eps,model)
 
 
-        print("Clustering...")
-        startTime = time.time()
-        km_clusterer = KMeans(n_clusters=n_kmeans, n_jobs=1,  n_init=5)
-        ids = km_clusterer.fit_predict(docs)
-        endTime = time.time()
-        print("Time taken for clustering: {} minutes".format((endTime - startTime) / 60))
 
-        word_centroid_map = dict(zip( model.docvecs.offset2doctag, ids ))
-
-        #print "word_centroid_map"
-        #print word_centroid_map[1]
-
-        list_labels_cluster = [[] for y in range(n_kmeans)]
-        for cluster in xrange(0,n_kmeans):
-        # Print the cluster number
-            print "Computing cluster %d..." % cluster
-            for i in xrange(0,len(word_centroid_map.values())):
-                if ( word_centroid_map.values()[i] == cluster ):
-                    list_labels_cluster[cluster].append(word_centroid_map.keys()[i])
-            #print list_docs_cluster
-        #docs_cluster = [[cluster]]
-
-        test = 1
-        if test:
-            print 'Testing...'
-
-            list_docs_cluster = [[] for y in range(n_kmeans)]
-            num_test_cluster = [0 for y in range(n_kmeans)]  # Traffic elements
-
-            f = open(arg['corpus'],'r')
-            for i in f:
-                id = i.split(' ',1)[0]
-                label = "DOC_" + id
-                for c in range(n_kmeans):
-                    if  label in list_labels_cluster[c]:
-                        list_docs_cluster[c].append(i)
-                        if (int(id) > 8745):
-                            num_test_cluster[c]= num_test_cluster[c] + 1
-                        break
-            f.close()
-
-            for i in xrange(0,n_kmeans):
-                print "Cluster "+ str(i) + ":"
-                print  "\tNum itens: %d\t(%.2f%%)"  %(len(list_docs_cluster[i]),100*float(len(list_docs_cluster[i]))/len(ids))
-                print  "\tTraffic itens/Cluster doc itens: %.2f%%\t# Porcentagem de tweets de transito em relacao a quantidade global" % (100*float(num_test_cluster[i]) /len(list_docs_cluster[i]))
-                precision = float( num_test_cluster[i]) / len(list_docs_cluster[i])
-                print  "\tPrecision: %.2f\t# Relação:(Tweets relevantes que foram recuperados)/(tweets recuperados)" % precision
-                recall = float(num_test_cluster[i])/ 6065
-                print  "\tRecall: %.2f\t# Relação: (Tweets relevantes que foram recuperados)/(tweets relevantes)" % recall
-                print "\tF-Measure (harmonic avg): %.2f" % (float((2*precision*recall))/(precision+ recall))
-
-            f = open(arg['output']+"_clusters.txt", 'w')
-            for i in list_docs_cluster:
-                f.write("Cluster:\n")
-                for z in i:
-                    f.write(z)
-
-            f.close()
